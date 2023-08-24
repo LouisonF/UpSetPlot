@@ -338,10 +338,15 @@ def query(data, present=None, absent=None,
         totals = totals[::-1]
     elif sort_categories_by in (None, 'input'):
         pass
+    elif type(sort_categories_by) == list:
+        sort_categories_by.reverse()
+        data = data.reorder_levels(sort_categories_by)
+        agg = agg.reorder_levels(sort_categories_by)
     else:
         raise ValueError('Unknown sort_categories_by: %r' % sort_categories_by)
-    data = data.reorder_levels(totals.index.values)
-    agg = agg.reorder_levels(totals.index.values)
+    if type(sort_categories_by) != list:
+        data = data.reorder_levels(totals.index.values)
+        agg = agg.reorder_levels(totals.index.values)
 
     if sort_by in ('cardinality', '-cardinality'):
         agg = agg.sort_values(ascending=sort_by[:1] == '-')

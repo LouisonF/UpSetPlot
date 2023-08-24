@@ -489,7 +489,7 @@ class UpSet:
                                    'id': 'extra%d' % len(self._subset_plots),
                                    'elements': elements})
 
-    def add_catplot(self, kind, value=None, elements=3, **kw):
+    def add_catplot(self, kind, yvalue=None, xvalue=None, elements=3, **kw):
         """Add a seaborn catplot over subsets when :func:`plot` is called.
 
         Parameters
@@ -512,15 +512,16 @@ class UpSet:
         None
         """
         assert not set(kw.keys()) & {'ax', 'data', 'x', 'y', 'orient'}
-        if value is None:
+        if yvalue is None:
             if '_value' not in self._df.columns:
                 raise ValueError('value cannot be set if data is a Series. '
-                                 'Got %r' % value)
+                                 'Got %r' % yvalue)
         else:
-            if value not in self._df.columns:
-                raise ValueError('value %r is not a column in data' % value)
+            if yvalue not in self._df.columns:
+                raise ValueError('value %r is not a column in data' % yvalue)
         self._subset_plots.append({'type': 'catplot',
-                                   'value': value,
+                                   'yvalue': yvalue,
+                                   'xvalue' : xvalue,
                                    'kind': kind,
                                    'id': 'extra%d' % len(self._subset_plots),
                                    'elements': elements,
@@ -533,27 +534,30 @@ class UpSet:
             raise ValueError('value can only be None when data is a Series')
         return value
 
-    def _plot_catplot(self, ax, value, kind, kw):
+    def _plot_catplot(self, ax, yvalue, xvalue, kind, kw):
         df = self._df
-        value = self._check_value(value)
+        yvalue = self._check_value(yvalue)
+        xvalue = self._check_value(xvalue)
         kw = kw.copy()
         if self._horizontal:
             kw['orient'] = 'v'
-            kw['x'] = '_bin'
-            kw['y'] = value
+            kw['x'] = xvalue
+            kw['y'] = yvalue
         else:
             kw['orient'] = 'h'
-            kw['x'] = value
-            kw['y'] = '_bin'
+            kw['x'] = yvalue
+            kw['y'] = xvalue
         import seaborn
         kw['ax'] = ax
         getattr(seaborn, kind + 'plot')(data=df, **kw)
 
         ax = self._reorient(ax)
-        if value == '_value':
+        if yvalue == '_value':
             ax.set_ylabel('')
 
-        ax.xaxis.set_visible(False)
+        ax.set_xticklabels(ax.get_xticklabels(),rotation=45)
+        ax.set_xlabel('')
+        ax.xaxis.set_visible(True)
         for x in ['top', 'bottom', 'right']:
             ax.spines[self._reorient(x)].set_visible(False)
 
@@ -597,8 +601,10 @@ class UpSet:
             render_ratio = figw / fig.get_figwidth()
             colw = self._element_size / 72 * render_ratio
             figw = colw * (non_text_nelems + np.ceil(textw / colw) + 1)
+            # maxlab_len = max([(len(x)) for a,x in enumerate(self.)])
+            maxlab_len = 12
             fig.set_figwidth(figw / render_ratio)
-            fig.set_figheight((colw * (n_cats + sizes.sum())) /
+            fig.set_figheight((colw * (n_cats + maxlab_len + sizes.sum())) /
                               render_ratio)
 
         text_nelems = int(np.ceil(figw / colw - non_text_nelems))
